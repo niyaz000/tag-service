@@ -1,4 +1,4 @@
-# Tag-as-a-Service (Tags Service)
+# Tag-as-a-Service (Tags Service) [WIP]
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/niyaz000/tag-service)
 [![Java Version](https://img.shields.io/badge/java-21-blue)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
