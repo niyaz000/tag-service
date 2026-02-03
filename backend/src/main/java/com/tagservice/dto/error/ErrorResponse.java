@@ -14,6 +14,7 @@ import java.util.List;
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class ErrorResponse {
 
     private String type;
@@ -21,15 +22,19 @@ public class ErrorResponse {
     private int status;
     private String detail;
     private String instance;
-    private String request_id;
+
+    @JsonProperty("request_id")
+    private String requestId;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     private OffsetDateTime timestamp;
 
-    private List<ApiSubError> errors;
+    private List<ApiSubError> errors = new ArrayList<>();
 
     @Data
     @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class ApiSubError {
         private String field;
         private String type;

@@ -33,32 +33,20 @@ public class RequestIdFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         try {
-            // Check if request already has a request ID (from client or proxy)
-            String requestId = httpRequest.getHeader(REQUEST_ID_HEADER);
-
-            // Validate and use client-provided request ID if it's a valid UUID
-            if (StringUtils.isNotBlank(requestId)) {
-                if (!ValidationUtils.isValidUUID(requestId)) {
-                    // Invalid UUID format, generate a new one
-                    requestId = UUID.randomUUID().toString();
-                }
-            } else {
-                // No request ID provided, generate a new UUID
-                requestId = UUID.randomUUID().toString();
-            }
-
-            // Add request ID to MDC for logging
+            String requestId = resolveRequestId(httpRequest);
             MDC.put(MDC_REQUEST_ID_KEY, requestId);
-
-            // Add request ID to response headers
             httpResponse.setHeader(REQUEST_ID_HEADER, requestId);
-
-            // Continue with the filter chain
             chain.doFilter(request, response);
-
         } finally {
-            // Clean up MDC to prevent memory leaks
             MDC.remove(MDC_REQUEST_ID_KEY);
         }
+    }
+
+    private String resolveRequestId(HttpServletRequest httpRequest) {
+        String requestId = httpRequest.getHeader(REQUEST_ID_HEADER);
+        if (StringUtils.isNotBlank(requestId) && ValidationUtils.isValidUUID(requestId)) {
+            return requestId;
+        }
+        return UUID.randomUUID().toString();
     }
 }
