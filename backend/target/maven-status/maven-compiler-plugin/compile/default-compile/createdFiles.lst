@@ -1,0 +1,5 @@
+com/tagservice/filter/OrganizationIdFilter.class
+com/tagservice/filter/RequestIdFilter.class
+com/tagservice/controller/HealthController.class
+com/tagservice/TagServiceApplication.class
+com/tagservice/util/ValidationUtils.class

@@ -4,28 +4,26 @@ This document outlines the standard practices used across the Tag Service API.
 
 ## 1. Base URL
 All API endpoints are prefixed with:
-`https://api.tag-service.com/api/v1`
+`https://api.<your domain>.tags-service.com/v1`
 
 ## 2. Authentication
 The API supports the following authentication mechanism:
 
 *   **Header Authentication**:
     *   `Authorization`: `Bearer <token>` (JWT or API Key)
-    *   `X-Tenant-ID`: `Integer` (Required for tenant-specific operations. Maps to `organization.id`)
+    *   `X-Organization-ID`: `Integer` (Required for tenant-specific operations)
 
 ## 3. Request Headers
 | Header | Required | Description |
 | :--- | :--- | :--- |
 | `Content-Type` | Yes | Must be `application/json` for bodies. |
 | `Accept` | No | Defaults to `application/json`. |
-| `X-Request-ID` | No | Custom UUID for tracing request lifecycles. |
-| `X-Tenant-ID` | **Yes** | The Organization ID context for the request (for multi-tenancy). |
+| `X-Organization-ID` | **Yes** | The Organization ID context for the request (for multi-tenancy). |
 
 ## 4. Response Headers
 | Header | Description |
 | :--- | :--- |
 | `X-Request-ID` | The tracing ID (echoed back or generated). |
-| `X-Execution-Time` | Time taken to process the request (ms). |
 | `Content-Type` | `application/json; charset=utf-8` |
 
 ## 5. Error Handling
@@ -35,13 +33,35 @@ All errors return a consistent JSON format:
 
 ```json
 {
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "The requested organization was not found.",
-    "trace_id": "c6a2e460-..."
-  }
+  "type": "https://api.tag-service.com/errors#validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "One or more fields failed validation.",
+  "instance": "/api/v1/organizations",
+  "request_id": "c6a2e460-705a-471f-8c66-1234567890ab",
+  "timestamp": "2026-02-03T11:55:00.000Z",
+  "errors": [
+    {
+      "field": "display_name",
+      "type": "https://api.tag-service.com/errors#duplicate-entity",
+      "description": "Entity identified by 'display_name' with value 'Acme Corp' already exists."
+    }
+  ]
 }
 ```
+
+### Field Descriptions
+*   `type`: URI reference identifying the error type (RFC 7807).
+*   `title`: Short, human-readable summary of the error.
+*   `status`: HTTP status code.
+*   `detail`: Human-readable explanation specific to this occurrence.
+*   `instance`: URI reference identifying the specific occurrence (request path).
+*   `request_id`: Tracing ID for the request.
+*   `timestamp`: ISO 8601 timestamp when the error occurred.
+*   `errors`: (Optional) List of specific field validation errors.
+    *   `field`: The field that caused the error.
+    *   `type`: URI reference for the specific field error type.
+    *   `description`: Detailed message for the field error.
 
 ### Standard HTTP Status Codes
 
