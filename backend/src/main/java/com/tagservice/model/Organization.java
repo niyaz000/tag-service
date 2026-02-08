@@ -39,9 +39,11 @@ public class Organization extends BaseEntity {
     private OffsetDateTime deletedAt;
 
     /**
-     * Raw JSON settings stored as JSONB in PostgreSQL.
+     * Structured settings stored as JSONB in PostgreSQL.
+     * Mapped to a DTO based on the API specification.
      */
     @Column(columnDefinition = "jsonb")
-    private String settings;
+    @Convert(converter = OrganizationSettingsConverter.class)
+    private OrganizationSettings settings;
 }
 

@@ -1,8 +1,9 @@
 package com.tagservice.filter;
 
+import com.tagservice.client.OrganizationClient;
 import com.tagservice.context.OrganizationContext;
+import com.tagservice.enums.ApiErrorType;
 import com.tagservice.dto.error.OrganizationDto;
-import com.tagservice.service.OrganizationService;
 import com.tagservice.util.ErrorResponseUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.Filter;
@@ -35,12 +36,12 @@ public class OrganizationExistenceFilter implements Filter {
             "/health"
     };
 
-    private final OrganizationService organizationService;
+    private final OrganizationClient organizationClient;
     private final ErrorResponseUtil errorResponseUtil;
 
-    public OrganizationExistenceFilter(OrganizationService organizationService,
+    public OrganizationExistenceFilter(OrganizationClient organizationClient,
                                        ErrorResponseUtil errorResponseUtil) {
-        this.organizationService = organizationService;
+        this.organizationClient = organizationClient;
         this.errorResponseUtil = errorResponseUtil;
     }
 
@@ -62,13 +63,11 @@ public class OrganizationExistenceFilter implements Filter {
 
         String organizationIdFromContext = OrganizationContext.getOrganizationId();
 
+        // If no organization has been set in the context (e.g., for routes that don't require it),
+        // skip validation and continue the filter chain.
         if (organizationIdFromContext == null) {
-            logger.warn("Organization ID missing from context for request: {}", requestPath);
-            errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_BAD_REQUEST,
-                    "https://api.tag-service.com/errors#missing-organization",
-                    "Organization Context Missing",
-                    "The organization context is missing for this request.",
-                    requestPath);
+            logger.debug("No organization in context for request: {}, skipping existence validation", requestPath);
+            chain.doFilter(request, response);
             return;
         }
 
@@ -78,24 +77,24 @@ public class OrganizationExistenceFilter implements Filter {
         } catch (NumberFormatException ex) {
             logger.warn("Invalid organization ID in context: {} for request: {}",
                     organizationIdFromContext, requestPath);
-            errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_BAD_REQUEST,
-                    "https://api.tag-service.com/errors#invalid-organization-id",
-                    "Invalid Organization Identifier",
+            errorResponseUtil.sendErrorResponse(httpResponse,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    ApiErrorType.INVALID_ORGANIZATION_ID,
                     "The organization identifier is not a valid numeric ID.",
                     requestPath);
             return;
         }
 
         try {
-            OrganizationDto organization = organizationService.getOrganizationById(organizationId);
+            OrganizationDto organization = organizationClient.getActiveOrganizationById(organizationId);
 
             // Defensive check: service already treats soft-deleted as non-existent,
             // but we keep this in case the implementation changes.
             if (organization.getDeletedAt() != null) {
                 logger.warn("Organization {} is soft-deleted for request: {}", organizationId, requestPath);
-                errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_GONE,
-                        "https://api.tag-service.com/errors#organization-deleted",
-                        "Organization Deleted",
+                errorResponseUtil.sendErrorResponse(httpResponse,
+                        HttpServletResponse.SC_GONE,
+                        ApiErrorType.ORGANIZATION_DELETED,
                         "The organization associated with this request has been deleted.",
                         requestPath);
                 return;
@@ -103,9 +102,9 @@ public class OrganizationExistenceFilter implements Filter {
 
         } catch (EntityNotFoundException ex) {
             logger.warn("Organization not found with id {} for request: {}", organizationId, requestPath);
-            errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_NOT_FOUND,
-                    "https://api.tag-service.com/errors#organization-not-found",
-                    "Organization Not Found",
+            errorResponseUtil.sendErrorResponse(httpResponse,
+                    HttpServletResponse.SC_NOT_FOUND,
+                    ApiErrorType.ORGANIZATION_NOT_FOUND,
                     "The organization associated with this request does not exist or has been deleted.",
                     requestPath);
             return;

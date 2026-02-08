@@ -1,11 +1,12 @@
 package com.tagservice.filter;
 
+import com.tagservice.util.MDCUtil;
 import com.tagservice.util.ValidationUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -20,10 +21,10 @@ import java.util.UUID;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@Slf4j
 public class RequestIdFilter implements Filter {
 
     private static final String REQUEST_ID_HEADER = "X-Request-ID";
-    private static final String MDC_REQUEST_ID_KEY = "requestId";
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -32,16 +33,21 @@ public class RequestIdFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        try {
-            String requestId = resolveRequestId(httpRequest);
-            MDC.put(MDC_REQUEST_ID_KEY, requestId);
+        String requestId = resolveRequestId(httpRequest);
+        log.debug("Request ID: {} for request: {}", requestId, httpRequest.getRequestURI());
+        MDCUtil.runWithRequestId((MDCUtil.FilterRunnable) () -> {
             httpResponse.setHeader(REQUEST_ID_HEADER, requestId);
             chain.doFilter(request, response);
-        } finally {
-            MDC.remove(MDC_REQUEST_ID_KEY);
-        }
+        }, requestId);
     }
 
+    /**
+     * Resolves the request ID from the request header.
+     * If the request ID is not present or invalid, a new random UUID is generated.
+     *
+     * @param httpRequest the HTTP request
+     * @return the request ID
+     */
     private String resolveRequestId(HttpServletRequest httpRequest) {
         String requestId = httpRequest.getHeader(REQUEST_ID_HEADER);
         if (StringUtils.isNotBlank(requestId) && ValidationUtils.isValidUUID(requestId)) {

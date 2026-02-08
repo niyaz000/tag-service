@@ -3,6 +3,9 @@ package com.tagservice.model;
 import com.tagservice.util.MDCUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Version;
@@ -24,6 +27,11 @@ import java.util.UUID;
 @Data
 public abstract class BaseEntity {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
@@ -42,10 +50,13 @@ public abstract class BaseEntity {
 
     @Version
     @Column(nullable = false)
-    private Integer version;
+    private Integer version = 0;
 
     @Column(name = "request_id", nullable = false)
     private UUID requestId;
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
 
     /**
      * Automatically populates requestId from MDC if available before persisting.

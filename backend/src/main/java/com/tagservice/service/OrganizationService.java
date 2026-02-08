@@ -1,8 +1,12 @@
 package com.tagservice.service;
 
+import com.tagservice.model.Organization;
 import com.tagservice.repository.OrganizationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.tagservice.request.OrganizationCreateRequest;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service for organization-related operations.
@@ -14,19 +18,33 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
 
     /**
-     * Checks whether an organization exists with the given ID.
-     * Soft-deleted organizations (with non-null deleted_at) are treated as non-existent.
+     * Creates a new organization from the incoming request payload.
+     *
+     * @param request the create organization request
+     * @return the persisted organization entity
+     */
+    @Transactional
+    public Organization createOrganization(OrganizationCreateRequest request) {
+        Organization organization = Organization.builder()
+                .name(request.getName())
+                .displayName(request.getDisplayName())
+                .domain(request.getDomain())
+                .type(request.getType())
+                .build();
+
+        return organizationRepository.save(organization);
+    }
+
+    /**
+     * Fetches an active (non-soft-deleted) organization by ID.
      *
      * @param id the organization ID
-     * @return the organization details
+     * @return the organization entity
      */
-    public OrganizationDto getOrganizationById(Long id) {
-        var organization = organizationRepository.findByIdAndDeletedAtIsNull(id)
+    @Transactional(readOnly = true)
+    public Organization getOrganizationById(Long id) {
+        return organizationRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new EntityNotFoundException("Organization not found with id: " + id));
-        return OrganizationDto.builder()
-                .id(organization.getId())
-                .deletedAt(organization.getDeletedAt())
-                .build();
     }
 }
 

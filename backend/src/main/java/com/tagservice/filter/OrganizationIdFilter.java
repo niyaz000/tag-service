@@ -1,16 +1,19 @@
 package com.tagservice.filter;
 
-import com.tagservice.context.OrganizationContext;
+import com.tagservice.enums.ApiErrorType;
 import com.tagservice.util.ErrorResponseUtil;
+import com.tagservice.util.MDCUtil;
 import com.tagservice.util.ValidationUtils;
-import jakarta.servlet.*;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -58,28 +61,28 @@ public class OrganizationIdFilter implements Filter {
         String organizationId = httpRequest.getHeader(ORGANIZATION_ID_HEADER);
 
         if (StringUtils.isBlank(organizationId)) {
-            logger.warn("Missing {} header for request: {}", ORGANIZATION_ID_HEADER, requestPath);
-            errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_BAD_REQUEST,
-                    "https://api.tag-service.com/errors#missing-header",
-                    "Missing Required Header",
+            log.warn("Missing {} header for request: {}", ORGANIZATION_ID_HEADER, requestPath);
+            errorResponseUtil.sendErrorResponse(httpResponse,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    ApiErrorType.MISSING_HEADER,
                     "The request is missing the required '" + ORGANIZATION_ID_HEADER + "' header.",
                     requestPath);
             return;
         }
 
         if (!ValidationUtils.isValidUUID(organizationId)) {
-            logger.warn("Invalid {} header format: {} for request: {}",
+            log.warn("Invalid {} header format: {} for request: {}",
                     ORGANIZATION_ID_HEADER, organizationId, requestPath);
-            errorResponseUtil.sendErrorResponse(httpResponse, HttpServletResponse.SC_BAD_REQUEST,
-                    "https://api.tag-service.com/errors#invalid-header",
-                    "Invalid Header Format",
+            errorResponseUtil.sendErrorResponse(httpResponse,
+                    HttpServletResponse.SC_BAD_REQUEST,
+                    ApiErrorType.INVALID_HEADER,
                     "The '" + ORGANIZATION_ID_HEADER + "' header must be a valid UUID.",
                     requestPath);
             return;
         }
 
         log.debug("Valid organization ID: {} for request: {}", organizationId, requestPath);
-        MDCUtil.runWithOrganizationId(() -> {
+        MDCUtil.runWithOrganizationId((MDCUtil.FilterRunnable) () -> {
             chain.doFilter(request, response);
         }, organizationId);
     }
